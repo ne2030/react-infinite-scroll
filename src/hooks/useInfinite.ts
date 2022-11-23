@@ -95,7 +95,8 @@ export const useInfinite = <Data>(options: InfiniteOptions<Data>) => {
 
   const topObserver = useInView({
     /* Optional options */
-    threshold: 0
+    threshold: 0,
+    rootMargin: `${window.innerHeight}px 0px 0px 0px`
   });
 
   useEffect(() => {
@@ -103,20 +104,24 @@ export const useInfinite = <Data>(options: InfiniteOptions<Data>) => {
 
     debug("Observe:: (top) ");
 
-    const firstIdx = infiniteItems.findIndex(
-      (a) => selKey(a) == selKey(infiniteItems[infiniteItems.length - 1])
+    const firstIdx = items.findIndex(
+      (a) => selKey(a) == selKey(infiniteItems[0])
     );
 
-    // addItems(items.slice(firstIdx - pageRenderCount, firstIdx), "top");
-  }, [topObserver.inView]);
+    const toBeAddedItems = items.slice(Math.max(0, firstIdx - pageRenderCount), firstIdx)
+
+    debug({ toBeAddedItems, firstIdx })
+
+    if (toBeAddedItems.length === 0) return;
+
+    addItems(toBeAddedItems, "top");
+  }, [topObserver.inView, items]);
 
   const bottomObserver = useInView({
     /* Optional options */
     threshold: 0,
-    rootMargin: `1000px`
+    rootMargin: `0px 0px ${window.innerHeight}px 0px`
   });
-
-  console.log("inview", bottomObserver.inView);
 
   useEffect(() => {
     if (!bottomObserver.inView) return;
@@ -127,26 +132,30 @@ export const useInfinite = <Data>(options: InfiniteOptions<Data>) => {
       (a) => selKey(a) === selKey(infiniteItems[infiniteItems.length - 1])
     );
 
-    if (lastIdx === items.length - 1 && bottomFinishedRef.current) {
-      return;
-    }
+
 
     // 가지고 있는 아이템이 부족할 경우 추가 fetch
     // finish 인 경우는 끝
-    // if (lastIdx + pageRenderCount + 1 >= items.length) {
-    // }
+    if (lastIdx + pageRenderCount + 1 >= items.length && !bottomFinishedRef.current) {
+      // fetch and wait "items" change
+      return;
+    }
 
-    debug({
-      infiniteItems,
-      lastIdx,
-      infiniteLastId: infiniteItems[infiniteItems.length - 1]
-    });
-    debug(items.slice(lastIdx + 1, lastIdx + 1 + pageRenderCount));
+    const toBeAddedItems = items.slice(lastIdx + 1, lastIdx + 1 + pageRenderCount)
 
-    addItems(items.slice(lastIdx + 1, lastIdx + 1 + pageRenderCount), "bottom");
+    if (toBeAddedItems.length === 0) return;
+
+    // debug({
+    //   infiniteItems,
+    //   lastIdx,
+    //   infiniteLastId: infiniteItems[infiniteItems.length - 1]
+    // });
+    // debug(items.slice(lastIdx + 1, lastIdx + 1 + pageRenderCount));
+
+    addItems(toBeAddedItems, "bottom");
 
     // adjustScroll("bottom", refs[refs.length - 1].current);
-  }, [bottomObserver.inView]);
+  }, [bottomObserver.inView, items]);
 
   const setFinished = (direction: InfiniteTypes["direction"]) => {
     if (direction === "top") {

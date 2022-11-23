@@ -11,10 +11,10 @@ export default function App() {
     items,
     selKey: (n) => n.toString(),
     getItems: () => {},
-    maxRenderCount: 100,
+    maxRenderCount: 200,
     pageRenderCount: 30,
     createItemView: (n: number, ref) => (
-      <div className="row" key={n} data-key={n}>
+      <div className="row" key={n} data-key={n} ref={ref}>
         number is: {n}
       </div>
     ),
@@ -25,11 +25,10 @@ export default function App() {
 
   return (
     <div className="App">
-      {/* <div className="scrollContainer">
+      <div className="scrollContainer">
         <Infinite {...infiniteOptions} className="wrapper" />
-      </div> */}
+      </div>
 
-      <Infinite {...infiniteOptions} className="wrapper" />
 
       {/* {tmp.map((n) => (
         <div className="row" key={Math.random()}>
