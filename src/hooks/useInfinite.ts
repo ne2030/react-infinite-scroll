@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useInView } from "react-intersection-observer";
 import { InfiniteCore, InfiniteTypes } from "../types/types";
-import { take, takeRight, chunk, toArray, keys, first } from "@fxts/core";
+import { take, last, head, takeRight, chunk, toArray, keys, first } from "@fxts/core";
 
 type InfiniteOptions<Data> = InfiniteCore<Data> & {};
 
@@ -26,7 +26,8 @@ export const useInfinite = <Data>(options: InfiniteOptions<Data>) => {
     pageRenderCount,
     selKey,
     preloadMargin,
-    scrollElement
+    scrollElement,
+      getItems
   } = options;
 
   const limitMaxItems = (
@@ -67,6 +68,10 @@ export const useInfinite = <Data>(options: InfiniteOptions<Data>) => {
   const topFinishedRef = useRef(false);
 
   const refs = infiniteItems.map(() => createRef<Element>());
+
+  const retryObserverCallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [shouldRetry, retry] = useState(false);
+
   /*
    * State manage Funtions
    */
@@ -76,6 +81,12 @@ export const useInfinite = <Data>(options: InfiniteOptions<Data>) => {
   //   keysRef.current = items.map(options.selKey);
   //   _setInfiniteItems(items);
   // };
+
+  const createRetryTimer = () => {
+    return setTimeout(() => {
+      retry(true);
+    }, 300)
+  }
 
   const addItems = (
     newItems: Data[],
@@ -93,6 +104,10 @@ export const useInfinite = <Data>(options: InfiniteOptions<Data>) => {
    * Effect 관리
    */
 
+  /*
+  * Top
+   */
+
   const topObserver = useInView({
     /* Optional options */
     threshold: 0,
@@ -100,22 +115,27 @@ export const useInfinite = <Data>(options: InfiniteOptions<Data>) => {
   });
 
   useEffect(() => {
-    if (!topObserver.inView) return;
+    if (!topObserver.inView) return retry(false);
 
     debug("Observe:: (top) ");
 
     const firstIdx = items.findIndex(
-      (a) => selKey(a) == selKey(infiniteItems[0])
+      (a) => selKey(a) == selKey(head(infiniteItems))
     );
 
     const toBeAddedItems = items.slice(Math.max(0, firstIdx - pageRenderCount), firstIdx)
 
-    debug({ toBeAddedItems, firstIdx })
-
     if (toBeAddedItems.length === 0) return;
 
+    retryObserverCallbackRef.current = createRetryTimer()
+
     addItems(toBeAddedItems, "top");
-  }, [topObserver.inView, items]);
+  }, [topObserver.inView, items, shouldRetry]);
+
+
+  /*
+  * Bottom
+   */
 
   const bottomObserver = useInView({
     /* Optional options */
@@ -124,38 +144,41 @@ export const useInfinite = <Data>(options: InfiniteOptions<Data>) => {
   });
 
   useEffect(() => {
-    if (!bottomObserver.inView) return;
+    // debug(`Effect:: (bottom: ${bottomObserver.inView})`)
+    if (!bottomObserver.inView) return retry(false);
+
+    // retry 체크 타이머 제거
+    if (retryObserverCallbackRef.current) {
+      clearTimeout(retryObserverCallbackRef.current);
+      retryObserverCallbackRef.current = null;
+    }
 
     debug("Observe:: (bottom) ");
 
     const lastIdx = items.findIndex(
-      (a) => selKey(a) === selKey(infiniteItems[infiniteItems.length - 1])
+      (a) => selKey(a) === selKey(last(infiniteItems))
     );
-
-
 
     // 가지고 있는 아이템이 부족할 경우 추가 fetch
     // finish 인 경우는 끝
     if (lastIdx + pageRenderCount + 1 >= items.length && !bottomFinishedRef.current) {
       // fetch and wait "items" change
+      debug('Fetch:: (bottom)')
+      debug({lastIdx, pageRenderCount, item_len: items.length})
+      getItems(selKey(last(items)))
       return;
     }
 
     const toBeAddedItems = items.slice(lastIdx + 1, lastIdx + 1 + pageRenderCount)
 
-    if (toBeAddedItems.length === 0) return;
+    if (toBeAddedItems.length === 0) return debug('Out:: (bottom)');
 
-    // debug({
-    //   infiniteItems,
-    //   lastIdx,
-    //   infiniteLastId: infiniteItems[infiniteItems.length - 1]
-    // });
-    // debug(items.slice(lastIdx + 1, lastIdx + 1 + pageRenderCount));
+    retryObserverCallbackRef.current = createRetryTimer()
 
     addItems(toBeAddedItems, "bottom");
 
     // adjustScroll("bottom", refs[refs.length - 1].current);
-  }, [bottomObserver.inView, items]);
+  }, [bottomObserver.inView, items, shouldRetry]);
 
   const setFinished = (direction: InfiniteTypes["direction"]) => {
     if (direction === "top") {
