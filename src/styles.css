@@ -1,0 +1,19 @@
+.App {
+  font-family: sans-serif;
+  /* display: flex; */
+}
+
+.row {
+  height: 30px;
+  margin: 2px 0;
+  padding: 4px;
+  border: 1px solid gray;
+}
+
+.scrollContainer {
+  flex-grow: 1;
+}
+
+.wrapper {
+  flex-grow: 1;
+}

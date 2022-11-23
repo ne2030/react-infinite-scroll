@@ -1,2 +1,2 @@
-# react-infinite-scroll
+# type-2
 Created with CodeSandbox
