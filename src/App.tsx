@@ -6,8 +6,14 @@ import Infinite from "./Infinite";
 
 export default function App() {
   const [items, setItems] = useState(toArray(range(200)));
+  const [removed, setRemoved] = useState<number[]>([]);
 
   const fetchCount = 100;
+
+  const remove = (n) => {
+    setItems(prev => prev.filter(p => p !== n));
+    setRemoved(prev => [...prev, n]); // remove test
+  }
 
   const infiniteOptions = {
     items,
@@ -19,10 +25,10 @@ export default function App() {
         setItems(toArray(flat([items, newItems])));
       }, 500)
     },
-    maxRenderCount: 200,
+    maxRenderCount: 500,
     pageRenderCount: fetchCount,
     createItemView: (n: number, ref) => (
-      <div className="row" key={n} data-key={n} ref={ref}>
+      <div className="row" style={{ backgroundColor: removed.includes(n) ? 'red' : 'transparent'}} key={n} data-key={n} ref={ref} onClick={() => remove(n)}>
         number is: {n}
       </div>
     ),
