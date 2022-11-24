@@ -4,7 +4,7 @@
 }
 
 .row {
-  height: 30px;
+  height: 40px;
   margin: 2px 0;
   padding: 4px;
   border: 1px solid gray;
@@ -12,7 +12,10 @@
 }
 
 .scrollContainer {
-  flex-grow: 1;
+  width: 30%;
+  margin-top: 300px;
+  height: 1000px;
+  overflow-y: scroll;
 }
 
 .wrapper {

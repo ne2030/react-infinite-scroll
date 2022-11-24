@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { flat, map, range, last, toArray } from "@fxts/core";
 import "./styles.css";
 import { useInfinite } from "./hooks/useInfinite";
@@ -7,8 +7,16 @@ import Infinite from "./Infinite";
 export default function App() {
   const [items, setItems] = useState(toArray(range(200)));
   const [removed, setRemoved] = useState<number[]>([]);
+  const scrollElRef = useRef();
 
-  const fetchCount = 100;
+  useEffect(() =>{
+    setTimeout(() => {
+      setItems(toArray(range(-2000, 400)))
+    }, 1000)
+  }, [])
+
+  const fetchCount = 40;
+  const colors = ['black', 'gray', 'blue', 'red', 'orange', 'pink', 'skyblue', 'yellow', 'purple']
 
   const remove = (n) => {
     setItems(prev => prev.filter(p => p !== n));
@@ -17,6 +25,7 @@ export default function App() {
 
   const infiniteOptions = {
     items,
+    maxRenderCount: 500,
     selKey: (n) => n.toString(),
     getItems: () => {
       const lastItem = last(items);
@@ -25,21 +34,50 @@ export default function App() {
         setItems(toArray(flat([items, newItems])));
       }, 500)
     },
-    maxRenderCount: 500,
     pageRenderCount: fetchCount,
-    createItemView: (n: number, ref) => (
-      <div className="row" style={{ backgroundColor: removed.includes(n) ? 'red' : 'transparent'}} key={n} data-key={n} ref={ref} onClick={() => remove(n)}>
-        number is: {n}
-      </div>
-    ),
-    scrollElement: document.scrollingElement
+    createItemView: (n: number, ref) => {
+      return (
+          <div className="row" style={{ backgroundColor: removed.includes(n) ? 'red' : 'transparent'}} key={n} data-key={n} ref={ref} onClick={() => remove(n)}>
+            <div>
+              title: hello world
+            </div>
+            <div style={{ color: colors[n % colors.length], display: 'flex'}}>
+              <div>
+                <div>
+                  <div>
+                    <div>
+                      <div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div>
+                          <div></div>
+                          <div>
+                            <div>deep nested div</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <p style={{ margin: 0, marginLeft: '200px', color: 'black' }}>{n}</p>
+              </div>
+            </div>
+          </div>
+      )
+    },
+    scrollElement: scrollElRef.current || document.scrollingElement
   };
 
   // const [tmp, setTmp] = useState(toArray(range(20)));
 
   return (
     <div className="App">
-      <div className="scrollContainer">
+      <div className="scrollContainer" ref={scrollElRef}>
         <Infinite {...infiniteOptions} className="wrapper" />
       </div>
 
