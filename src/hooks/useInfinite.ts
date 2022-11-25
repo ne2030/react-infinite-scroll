@@ -1,4 +1,4 @@
-import { createRef, useEffect, useRef, useState } from 'react';
+import { createRef, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { InfiniteCore, InfiniteTypes } from '../types/types';
 import { head, last, take, takeRight, toArray } from '@fxts/core';
@@ -58,6 +58,7 @@ export const useInfinite = <Data>(options: InfiniteOptions<Data>) => {
   const [toBeAdded, setToBeAdded] = useState<{
     items: Data[];
     direction: InfiniteTypes['direction'];
+    added: boolean;
   } | null>(null);
 
   // key 관리 ref, 이걸로 비교 연산 진행 (최적화)
@@ -84,16 +85,6 @@ export const useInfinite = <Data>(options: InfiniteOptions<Data>) => {
   //   _setInfiniteItems(items);
   // };
 
-  useEffect(() => {
-    if (
-      !initialMinScroll &&
-      scrollElement.clientHeight < scrollElement.scrollHeight
-    ) {
-      scrollElement.scrollTo(0, 1);
-      setInitialMinScroll(true);
-    }
-  }, [infiniteItems]);
-
   const createRetryTimer = () => {
     return setTimeout(() => {
       retry(true);
@@ -118,7 +109,7 @@ export const useInfinite = <Data>(options: InfiniteOptions<Data>) => {
     setInfiniteItems(itemsAfterRemove);
 
     // 다음으로 추가 넘김
-    setToBeAdded({ items: newItems, direction });
+    setToBeAdded({ items: newItems, direction, added: false });
   }; // 수동 아이템 데이터 추가
 
   /*
@@ -141,14 +132,14 @@ export const useInfinite = <Data>(options: InfiniteOptions<Data>) => {
 
   // 아이템 추가 렌더링
   useEffect(() => {
-    if (!toBeAdded) return;
+    if (!toBeAdded || toBeAdded.added) return;
 
     const totalItems =
       toBeAdded.direction === 'bottom'
         ? [...infiniteItems, ...toBeAdded.items]
         : [...toBeAdded.items, ...infiniteItems];
 
-    debug('Added!!');
+    debug('Added effect');
 
     if (toBeAdded.direction == 'top') {
       scrollPositionRef.current = {
@@ -158,7 +149,27 @@ export const useInfinite = <Data>(options: InfiniteOptions<Data>) => {
     }
 
     setInfiniteItems(totalItems);
+    setToBeAdded({ ...toBeAdded, added: true });
   }, [toBeAdded]);
+
+  useLayoutEffect(() => {
+    if (
+      !scrollPositionRef.current ||
+      toBeAdded.direction == 'bottom' ||
+      !toBeAdded.added
+    )
+      return;
+
+    const idx = infiniteItems.findIndex(
+      (n) => selKey(n) == scrollPositionRef.current.key,
+    );
+
+    const top = refs[idx].current.getBoundingClientRect().top;
+
+    const diff = top - scrollPositionRef.current.top;
+
+    scrollElement.scrollBy(0, diff);
+  }, [infiniteItems]);
 
   /*
    * Top
